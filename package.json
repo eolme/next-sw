@@ -1,0 +1,46 @@
+{
+  "name": "next-sw",
+  "type": "commonjs",
+  "version": "0.1.0",
+  "main": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "author": {
+    "name": "Anton Petrov",
+    "email": "im@petrov.engineer",
+    "url": "https://petrov.engineer"
+  },
+  "description": "Next ServiceWorker plugin",
+  "license": "MIT",
+  "keywords": [
+    "next",
+    "nextjs",
+    "next.js",
+    "sw",
+    "serviceworker",
+    "service-worker"
+  ],
+  "homepage": "https://github.com/eolme/next-sw",
+  "bugs": "https://github.com/eolme/next-sw/issues",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/eolme/next-sw.git"
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "peerDependencies": {
+    "next": "^12.1.0"
+  },
+  "peerDependenciesMeta": {
+    "next": {
+      "optional": false
+    }
+  },
+  "devDependencies": {
+    "@mntm/eslint-config": "^1.1.1",
+    "eslint": "^8.10.0",
+    "next": "^12.1.0",
+    "typescript": "^4.6.2",
+    "webpack": "^5.70.0"
+  }
+}
