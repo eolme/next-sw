@@ -1,6 +1,17 @@
 # next-sw [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/eolme/next-sw/blob/master/LICENSE)
 
-Use any ServiceWorker with nextjs.
+Use any service worker with nextjs.
+
+## Features
+
+- Easy to use
+- No dependencies
+- No custom server needed
+- Supports `next export`
+
+After running `next` or `next build`, this will generate single file `sw.js` in your public folder, which serve statically.
+
+Live reloading and unregistering service worker are supported out of the box during development.
 
 ## Configuration
 
@@ -27,7 +38,7 @@ module.exports = withServiceWorker({
 
 ## Installation
 
-We recommend to use [yarn](https://classic.yarnpkg.com/en/docs/install/) for dependency management:
+Recommend to use [yarn](https://classic.yarnpkg.com/en/docs/install/) for dependency management:
 
 ```shell
 yarn add next-sw
