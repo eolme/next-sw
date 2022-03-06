@@ -33,7 +33,7 @@ module.exports = withServiceWorker({
 - entry: string - ServiceWorker script entry point
 - livereload: boolean
   - default to `true` during development
-  - set `livereload: false` to disable Live Reloading
+  - set `livereload: false` to disable live reloading
   - note: if the option is disabled, you need to use your own implementation of page reload
 
 ## Installation
