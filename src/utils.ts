@@ -1,22 +1,29 @@
 import { constants, default as fs } from 'fs';
+import { default as path } from 'path';
 
 export const INJECT = 'main.js';
 export const NAME = 'ServiceWorker';
 
-export const access = (path: string) => {
+type AccessError = {
+  code: string;
+  path: string;
+};
+
+export const access = (file: string) => {
   try {
-    fs.accessSync(path, constants.R_OK);
+    fs.accessSync(file, constants.R_OK);
 
     return null;
   } catch (ex: unknown) {
-    return ex as Error;
+    return ex as AccessError;
   }
 };
 
 // eslint-disable-next-line global-require, @typescript-eslint/no-require-imports
 export const dynamic = (id: string) => require(require.resolve(id, {
   paths: [
-    process.cwd()
+    process.cwd(),
+    path.resolve(__dirname, '..')
   ]
 }));
 
@@ -48,4 +55,8 @@ export const tapPromiseDelegate = () => {
     resolve,
     reject
   } as const;
+};
+
+export const clearErrorStackTrace = (error: string) => {
+  return error.replace(/\n{3,}/g, '\n\n').replace(/^.*Module build failed.*$/m, '').replace(/^\s*at\s[\S\s]+/gm, '').trim();
 };

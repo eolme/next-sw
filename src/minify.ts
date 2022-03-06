@@ -33,7 +33,7 @@ export default function ServiceWorkerMinify(
           mangle: true
         });
 
-        const source = new compiler.webpack.sources.RawSource(result, true);
+        const source = new compiler.webpack.sources.RawSource(result.code, true);
 
         compilation.updateAsset(assetName, source, {
           minimized: true

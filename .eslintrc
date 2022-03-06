@@ -8,6 +8,7 @@
   "rules": {
     "no-sync": "off",
     "prefer-rest-params": "off",
+    "unicorn/no-process-exit": "off",
     "@typescript-eslint/promise-function-async": "off"
   }
 }

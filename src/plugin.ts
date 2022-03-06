@@ -5,9 +5,10 @@ import type {
 
 import { default as path } from 'path';
 
-import { INJECT, NAME, access, noop, tapPromiseDelegate } from './utils';
+import { INJECT, NAME, access, clearErrorStackTrace, noop, tapPromiseDelegate } from './utils';
 import { listen } from './livereload';
 import { build } from './build';
+import { log } from './log';
 
 type ServiceWorkerConfig = {
   entry?: string;
@@ -42,7 +43,7 @@ export default function withServiceWorker(nextConfig: NextConfigWithServiceWorke
         typeof nextConfig.serviceWorker !== 'object' ||
         typeof nextConfig.serviceWorker.entry !== 'string'
       ) {
-        console.warn('[ServiceWorker] Configuration is empty. Skipped.');
+        log.info('skipping building service worker');
 
         return resolvedConfig;
       }
@@ -60,15 +61,16 @@ export default function withServiceWorker(nextConfig: NextConfigWithServiceWorke
       const _access = access(_entry);
 
       if (_access !== null) {
-        console.error(`[ServiceWorker] Entry "${nextConfig.serviceWorker.entry}" is not accessible:`);
-        throw _access;
+        log.error(`./${path.relative(process.cwd(), nextConfig.serviceWorker.entry)}`);
+        console.error('ENOENT: no such file or directory');
+        process.exit(2);
       }
 
       let _emitEvent = noop;
 
       if (typeof nextConfig.serviceWorker.livereload !== 'boolean') {
         if (context.dev) {
-          console.log('[ServiceWorker] Live Reloading enabled by default during development.');
+          log.info('live reloading feature is enabled by default during development');
         }
 
         nextConfig.serviceWorker.livereload = context.dev;
@@ -77,7 +79,7 @@ export default function withServiceWorker(nextConfig: NextConfigWithServiceWorke
       if (nextConfig.serviceWorker.livereload && context.dev) {
         // Start SSE server
         _emitEvent = listen(() => {
-          console.log('[ServiceWorker] Live Reloading ready.');
+          log.ready('started live reloading server');
         });
 
         const client = path.resolve(__dirname, 'client.js');
@@ -90,6 +92,8 @@ export default function withServiceWorker(nextConfig: NextConfigWithServiceWorke
             const inject = entry[INJECT];
 
             if (!inject.includes(client)) {
+              log.info('live reloading client injected');
+
               inject.unshift(client);
             }
 
@@ -101,6 +105,7 @@ export default function withServiceWorker(nextConfig: NextConfigWithServiceWorke
       // Recompilation status
       let _recompilation = false;
       let _recompilationHash: string | null | undefined = null;
+      let _recompilationError = '';
 
       // It is necessary to delegate state of own compilation
       const _sync = tapPromiseDelegate();
@@ -116,39 +121,45 @@ export default function withServiceWorker(nextConfig: NextConfigWithServiceWorke
         entry: _entry,
         public: _public,
         define: _define
-      }, (err, stats) => {
-        if (!stats) {
-          return;
+      }, (stats) => {
+        if (stats.hasErrors()) {
+          const error = stats.toJson({
+            all: false,
+            errors: true
+          }).errors![0];
+
+          const _error = clearErrorStackTrace(error.message);
+
+          if (_recompilationError !== _error) {
+            _recompilationError = _error;
+
+            log.error(error.moduleName!);
+            console.error(_recompilationError);
+
+            if (context.dev) {
+              _emitEvent('error');
+            } else {
+              process.exit(1);
+            }
+          }
         }
 
-        if (err || stats.hasErrors()) {
-          console.error('[ServiceWorker] Build failed:');
+        if (_recompilationHash !== stats.compilation.fullHash) {
+          log.event('compiled service worker successfully');
 
-          if (context.dev) {
-            console.error(stats.toString({ colors: true }));
-
-            _emitEvent('error');
-          } else if (err) {
-            throw err;
-          } else {
-            throw new Error(stats.toString({ errors: true }));
-          }
-        } else if (
-          _recompilationHash !== stats.compilation.fullHash
-        ) {
           if (context.dev && _recompilation) {
-            console.log('[ServiceWorker] Build success. Reloading...');
+            log.wait('reloading...');
 
             _emitEvent('reload');
           } else {
-            console.log('[ServiceWorker] Build success.');
-
             _sync.resolve();
           }
 
           _recompilation = true;
           _recompilationHash = stats.compilation.fullHash;
         }
+
+        // Nothing to show
       });
 
       // Plugin to wait for compilation

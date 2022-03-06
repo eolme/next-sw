@@ -17,7 +17,7 @@ type ServiceWorkerBuildConfig = {
   define: WebpackPluginInstance | WebpackPluginFunction;
 };
 
-type ServiceWorkerBuildCallback = (err: Error | undefined, stats: WebpackStats | undefined) => void;
+type ServiceWorkerBuildCallback = (stats: WebpackStats) => void;
 
 export const build = (config: ServiceWorkerBuildConfig, callback: ServiceWorkerBuildCallback) => {
   const webpack: typeof OriginalWebpack = dynamic('next/dist/compiled/webpack')().webpack;
@@ -83,5 +83,17 @@ export const build = (config: ServiceWorkerBuildConfig, callback: ServiceWorkerB
     plugins: [
       config.define
     ]
-  }, callback);
+  }, (err, stats) => {
+    if (err) {
+      // Webpack internal error
+      throw err;
+    }
+
+    if (!stats) {
+      // Nothing to show
+      return;
+    }
+
+    return callback(stats);
+  });
 };
