@@ -71,7 +71,7 @@ export const build = (config: ServiceWorkerBuildConfig, callback: ServiceWorkerB
           fullySpecified: false
         }
       }, {
-        test: /\.(js|mjs|jsx|ts|tsx)$/,
+        test: /\.(js|mjs|ts)$/,
         use: {
           loader: path.resolve(__dirname, 'loader.js'),
           options: {
