@@ -131,12 +131,12 @@ export default function withServiceWorker(nextConfig: NextConfigWithServiceWorke
       }) as WebpackPluginInstance;
 
       // Resolve scope
-      const _scope = nextConfig.basePath || '/';
+      const _scope = nextConfig.basePath ? `${nextConfig.basePath}/` : '/';
 
       // Inject env
       Object.assign(_define.definitions!, {
-        'process.env.__NEXT_SW': `'${_scope}/${_name}'`,
-        'process.env.__NEXT_SW_SCOPE': `'${_scope}/'`
+        'process.env.__NEXT_SW': `'${_scope}${_name}'`,
+        'process.env.__NEXT_SW_SCOPE': `'${_scope}'`
       });
 
       build({
