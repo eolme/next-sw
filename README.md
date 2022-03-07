@@ -22,6 +22,7 @@ const { withServiceWorker } = require('next-sw');
 
 module.exports = withServiceWorker({
   serviceWorker: {
+    name: 'sw.js',
     entry: 'worker/entry.ts',
     livereload: true
   }
@@ -30,7 +31,9 @@ module.exports = withServiceWorker({
 
 ### Available Options
 
-- entry: string - ServiceWorker script entry point
+- name: string - service worker name
+  - default to `sw.js`
+- entry: string - service worker script entry point
 - livereload: boolean
   - default to `true` during development
   - set `livereload: false` to disable live reloading

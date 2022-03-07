@@ -11,6 +11,7 @@ import { build } from './build';
 import { log } from './log';
 
 type ServiceWorkerConfig = {
+  name?: string;
   entry?: string;
   livereload?: boolean;
 };
@@ -113,11 +114,22 @@ export default function withServiceWorker(nextConfig: NextConfigWithServiceWorke
       // Resolve public folder
       const _public = path.resolve(process.cwd(), 'public');
 
+      // Resolve name
+      let _name = 'sw.js';
+
+      if (
+        typeof nextConfig.serviceWorker.name === 'string' &&
+        nextConfig.serviceWorker.name !== ''
+      ) {
+        _name = `${path.basename(nextConfig.serviceWorker.name, '.js')}.js`;
+      }
+
       // Extract DefinePlugin
       const _define = resolvedConfig.plugins!.find((plugin) => plugin.constructor.name === 'DefinePlugin')!;
 
       build({
         dev: context.dev,
+        name: _name,
         entry: _entry,
         public: _public,
         define: _define

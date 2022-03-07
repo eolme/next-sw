@@ -12,6 +12,7 @@ import { default as ServiceWorkerMinify } from './minify';
 
 type ServiceWorkerBuildConfig = {
   dev: boolean;
+  name: string;
   entry: string;
   public: string;
   define: WebpackPluginInstance | WebpackPluginFunction;
@@ -51,7 +52,7 @@ export const build = (config: ServiceWorkerBuildConfig, callback: ServiceWorkerB
       globalObject: 'self',
       iife: false,
       path: config.public,
-      filename: 'sw.js'
+      filename: config.name
     },
     optimization: {
       splitChunks: false,
