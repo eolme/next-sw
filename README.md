@@ -17,7 +17,7 @@ Live reloading and unregistering service worker are supported out of the box dur
 
 There are options you can use to customize the behavior of this plugin by adding `serviceWorker` object in the next config in `next.config.js`:
 
-```javascript
+```js
 const { withServiceWorker } = require('next-sw');
 
 module.exports = withServiceWorker({
@@ -38,6 +38,18 @@ module.exports = withServiceWorker({
   - default to `true` during development
   - set `livereload: false` to disable live reloading
   - note: if the option is disabled, you need to use your own implementation of page reload
+
+## Usage
+
+You need to manually register service worker, for example, in `pages/_app.jsx` like this:
+
+```js
+if (typeof window !== 'undefined') {
+  navigator.serviceWorker.register(process.env.__NEXT_SW, {
+    scope: process.env.__NEXT_SW_SCOPE
+  });
+}
+```
 
 ## Installation
 

@@ -1,6 +1,5 @@
 import type {
-  webpack as OriginalWebpack,
-  WebpackPluginFunction,
+  webpack as WebpackFunction,
   WebpackPluginInstance,
   Stats as WebpackStats
 } from 'webpack';
@@ -15,13 +14,13 @@ type ServiceWorkerBuildConfig = {
   name: string;
   entry: string;
   public: string;
-  define: WebpackPluginInstance | WebpackPluginFunction;
+  define: WebpackPluginInstance;
 };
 
 type ServiceWorkerBuildCallback = (stats: WebpackStats) => void;
 
 export const build = (config: ServiceWorkerBuildConfig, callback: ServiceWorkerBuildCallback) => {
-  const webpack: typeof OriginalWebpack = dynamic('next/dist/compiled/webpack')().webpack;
+  const webpack: typeof WebpackFunction = dynamic('next/dist/compiled/webpack')().webpack;
 
   return webpack({
     mode: config.dev ? 'development' : 'production',

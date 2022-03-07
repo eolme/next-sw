@@ -1,6 +1,7 @@
 import type { NextConfig } from 'next';
 import type {
-  Configuration as WebpackConfiguration
+  Configuration as WebpackConfiguration,
+  WebpackPluginInstance
 } from 'webpack';
 
 import { default as path } from 'path';
@@ -125,7 +126,18 @@ export default function withServiceWorker(nextConfig: NextConfigWithServiceWorke
       }
 
       // Extract DefinePlugin
-      const _define = resolvedConfig.plugins!.find((plugin) => plugin.constructor.name === 'DefinePlugin')!;
+      const _define = resolvedConfig.plugins!.find((plugin) => {
+        return plugin.constructor.name === 'DefinePlugin';
+      }) as WebpackPluginInstance;
+
+      // Resolve scope
+      const _scope = nextConfig.basePath || '/';
+
+      // Inject env
+      Object.assign(_define.definitions!, {
+        'process.env.__NEXT_SW': `'${_scope}/${_name}'`,
+        'process.env.__NEXT_SW_SCOPE': `'${_scope}/'`
+      });
 
       build({
         dev: context.dev,
