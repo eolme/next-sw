@@ -1,7 +1,7 @@
 {
   "name": "next-sw",
   "type": "commonjs",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "author": {

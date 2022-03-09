@@ -48,7 +48,6 @@ export const build = (config: ServiceWorkerBuildConfig, callback: ServiceWorkerB
       asyncChunks: false,
       chunkLoading: false,
       chunkFormat: false,
-      enabledChunkLoadingTypes: [],
       globalObject: 'self',
       iife: false,
       path: config.public,
