@@ -28,8 +28,7 @@ export const build = (config: ServiceWorkerBuildConfig, callback: ServiceWorkerB
     watchOptions: {
       aggregateTimeout: 5,
       ignored: [
-        '**/public/**',
-        '**/node_modules/**'
+        '**/public/**'
       ]
     },
     cache: {
