@@ -38,7 +38,7 @@ url.port = '4000';
 
 const source = new EventSource(url);
 
-// Handle SSE
+// Handle control messages
 source.onmessage = (event) => {
   if (event.data === 'error') {
     console.error('[ServiceWorker] Errors while compiling. Reload prevented.');
@@ -59,7 +59,7 @@ source.onmessage = (event) => {
   console.warn(`[ServiceWorker] Unsupported event detected: ${event.data}`);
 };
 
-// Handle onerror aka onclose
+// Handle error aka disconnect
 source.onerror = () => {
-  console.log('[ServiceWorker] Server has disconnected. Refresh the page if necessary.');
+  console.error('[ServiceWorker] Server has disconnected.');
 };

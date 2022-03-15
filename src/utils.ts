@@ -60,3 +60,34 @@ export const tapPromiseDelegate = () => {
 export const clearErrorStackTrace = (error: string) => {
   return error.replace(/\n{3,}/g, '\n\n').replace(/^.*Module build failed.*$/m, '').replace(/^\s*at\s[\S\s]+/gm, '').trim();
 };
+
+export const once = (handler: () => void) => {
+  let called = false;
+
+  return () => {
+    if (called) {
+      return;
+    }
+
+    handler();
+    called = true;
+  };
+};
+
+export const terminateWith = (handler: () => void) => {
+  const cb = once(handler);
+
+  [
+    // Parent close
+    'SIGHUP',
+    'SIGPIPE',
+    'SIGUSR2',
+
+    // Self close
+    'SIGINT',
+    'SIGQUIT',
+    'SIGTERM'
+  ].forEach((signal) => {
+    process.prependListener(signal as NodeJS.Signals, cb);
+  });
+};
