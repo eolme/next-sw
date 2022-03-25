@@ -9,25 +9,39 @@ export type { };
  * @description Runtime client
  */
 
+/** */
+const sw = navigator.serviceWorker;
+
 // Preserve original register
-const register = navigator.serviceWorker.register;
+const register = sw.register;
+
+// Preserve registrations
+const registrations: ServiceWorkerRegistration[] = [];
 
 // Unregister all workers
-const unregister = () => {
-  return navigator.serviceWorker.getRegistrations().then((registrations) => {
-    return Promise.all(registrations.map((registration) => registration.unregister()));
+const unregister = function unregister() {
+  return Promise.all(registrations.map((registration) => {
+    return registration.unregister().catch((ex: unknown) => {
+      console.error(`[ServiceWorker] Unregistration failed: ${ex}`);
+
+      return false;
+    });
+  }));
+};
+
+// Save registrations
+const proxyRegister = function proxyRegister() {
+  return register.apply(sw, arguments as any).then((registration) => {
+    registrations.push(registration);
+
+    return registration;
   });
 };
 
-// Update current registration
-const update = function update() {
-  return unregister().then(() => register.apply(navigator.serviceWorker, arguments as any));
-};
-
 // Patch resister
-Object.defineProperty(navigator.serviceWorker, 'register', {
+Object.defineProperty(sw, 'register', {
   enumerable: true,
-  value: update
+  value: proxyRegister
 });
 
 // Live Reloading endpoint
@@ -36,10 +50,11 @@ const url = new URL('/', location.origin);
 // Live Reloading port
 url.port = '4000';
 
+/** */
 const source = new EventSource(url);
 
 // Handle control messages
-source.onmessage = (event) => {
+source.onmessage = function onmessage(event) {
   if (event.data === 'error') {
     console.error('[ServiceWorker] Errors while compiling. Reload prevented.');
 
@@ -60,6 +75,6 @@ source.onmessage = (event) => {
 };
 
 // Handle error aka disconnect
-source.onerror = () => {
+source.onerror = function onerror() {
   console.error('[ServiceWorker] Server has disconnected.');
 };
