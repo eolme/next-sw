@@ -1,6 +1,21 @@
 import { dynamic } from './utils';
 
-const chalk = dynamic('next/dist/compiled/chalk');
+type ChalkFunction = (str: string) => string;
+type Chalk = {
+  cyan: ChalkFunction;
+  red: ChalkFunction;
+  yellow: ChalkFunction;
+  green: ChalkFunction;
+  magenta: ChalkFunction;
+};
+
+let chalk: Chalk;
+
+try {
+  chalk = dynamic('next/dist/compiled/chalk');
+} catch {
+  chalk = dynamic('chalk');
+}
 
 const prefixes = {
   wait: `${chalk.cyan('wait')}  -`,

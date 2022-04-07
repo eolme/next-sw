@@ -139,12 +139,16 @@ export default function withServiceWorker(nextConfig: NextConfigWithServiceWorke
         'process.env.__NEXT_SW_SCOPE': `'${_scope}'`
       });
 
+      // Use original resolve
+      const _resolve = resolvedConfig.resolve!;
+
       build({
         dev: context.dev,
         name: _name,
         entry: _entry,
         public: _public,
-        define: _define
+        define: _define,
+        resolve: _resolve
       }, (stats) => {
         if (stats.hasErrors()) {
           const error = stats.toJson({

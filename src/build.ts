@@ -1,11 +1,13 @@
 import type {
   webpack as WebpackFunction,
   WebpackPluginInstance,
+  ResolveOptions as WebpackResolveOptions,
   Stats as WebpackStats
 } from 'webpack';
 
 import { default as path } from 'path';
 
+import { log } from './log';
 import { dynamic } from './utils';
 import { default as ServiceWorkerMinify } from './minify';
 
@@ -15,13 +17,28 @@ type ServiceWorkerBuildConfig = {
   entry: string;
   public: string;
   define: WebpackPluginInstance;
+  resolve: WebpackResolveOptions;
 };
 
 type ServiceWorkerBuildCallback = (stats: WebpackStats) => void;
 
-export const build = (config: ServiceWorkerBuildConfig, callback: ServiceWorkerBuildCallback) => {
-  const webpack: typeof WebpackFunction = dynamic('next/dist/compiled/webpack')().webpack;
+let webpack: typeof WebpackFunction;
 
+try {
+  webpack = dynamic('next/dist/compiled/bundle5')().webpack;
+} catch {
+  webpack = dynamic('webpack');
+}
+if ('version' in webpack) {
+  const version = (webpack as any).version.split('.').map((num: string) => Number(num));
+
+  if (version[0] !== 5 || version[1] < 64) {
+    log.error(`next-sw depends on webpack@5.64 but only webpack@${version[0]}.${version[1]} was found`);
+    process.exit(2);
+  }
+}
+
+export const build = (config: ServiceWorkerBuildConfig, callback: ServiceWorkerBuildCallback) => {
   return webpack({
     mode: config.dev ? 'development' : 'production',
     watch: config.dev,
@@ -38,10 +55,7 @@ export const build = (config: ServiceWorkerBuildConfig, callback: ServiceWorkerB
     performance: false,
     target: 'webworker',
     entry: config.entry,
-    resolve: {
-      extensions: ['.js', '.mjs', '.ts'],
-      mainFields: ['module', 'main']
-    },
+    resolve: config.resolve,
     externalsType: 'self',
     output: {
       asyncChunks: false,

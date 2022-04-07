@@ -4,6 +4,11 @@ import { NAME, dynamic } from './utils';
 
 const swc = dynamic('next/dist/build/swc');
 
+type MinifyResult = { code: string };
+type MinifyFunction = (source: string, options: Record<string, unknown>) => MinifyResult;
+
+const minify: MinifyFunction = swc.minifySync;
+
 /** Simple SWC minifier */
 export default function ServiceWorkerMinify(
   this: Compiler,
@@ -28,7 +33,7 @@ export default function ServiceWorkerMinify(
           return;
         }
 
-        const result = swc.minifySync(asset.source.source().toString(), {
+        const result = minify(asset.source.source().toString(), {
           compress: true,
           mangle: true
         });

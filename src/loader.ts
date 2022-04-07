@@ -17,8 +17,7 @@ export default function ServiceWorkerLoader(
     minify: options.minify,
     jsc: {
       parser: {
-        syntax: 'typescript',
-        jsx: false
+        syntax: 'typescript'
       },
       target: 'es2015',
       loose: true,
