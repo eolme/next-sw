@@ -48,5 +48,8 @@
     "next": {
       "optional": false
     }
+  },
+  "optionalDependencies": {
+    "@types/webpack": "^5.28.0"
   }
 }
