@@ -70,6 +70,10 @@ export const build = (config: ServiceWorkerBuildConfig, callback: ServiceWorkerB
       splitChunks: false,
       runtimeChunk: false,
       concatenateModules: !config.dev,
+      mergeDuplicateChunks: !config.dev,
+      innerGraph: !config.dev,
+      providedExports: !config.dev,
+      usedExports: !config.dev,
       minimize: !config.dev,
       minimizer: [
         ServiceWorkerMinify
