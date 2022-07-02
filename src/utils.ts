@@ -1,13 +1,10 @@
+import type { AccessError, AnyFunction } from './types';
+
 import { constants, default as fs } from 'fs';
 import { default as path } from 'path';
 
 export const INJECT = 'main.js';
 export const NAME = 'ServiceWorker';
-
-type AccessError = {
-  code: string;
-  path: string;
-};
 
 export const access = (file: string) => {
   try {
@@ -34,8 +31,6 @@ export const splice = (arr: unknown[], item: unknown) => {
     arr.splice(index, 1);
   }
 };
-
-type AnyFunction = (...args: any[]) => any;
 
 export const noop: AnyFunction = () => {
   // Noop

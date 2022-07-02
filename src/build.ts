@@ -1,9 +1,8 @@
 import type {
-  webpack as WebpackFunction,
-  WebpackPluginInstance,
-  ResolveOptions as WebpackResolveOptions,
-  Stats as WebpackStats
-} from 'webpack';
+  ServiceWorkerBuildCallback,
+  ServiceWorkerBuildConfig,
+  WebpackFunction
+} from './types';
 
 import { default as path } from 'path';
 
@@ -11,18 +10,7 @@ import { log } from './log';
 import { dynamic } from './utils';
 import { default as ServiceWorkerMinify } from './minify';
 
-type ServiceWorkerBuildConfig = {
-  dev: boolean;
-  name: string;
-  entry: string;
-  public: string;
-  define: WebpackPluginInstance;
-  resolve: WebpackResolveOptions;
-};
-
-type ServiceWorkerBuildCallback = (stats: WebpackStats) => void;
-
-let webpack: typeof WebpackFunction;
+let webpack: WebpackFunction;
 
 try {
   webpack = dynamic('next/dist/compiled/bundle5')().webpack;
@@ -30,7 +18,7 @@ try {
   webpack = dynamic('webpack');
 }
 if ('version' in webpack) {
-  const version = (webpack as any).version.split('.').map((num: string) => Number(num));
+  const version = (webpack as any).version.split('.').map(Number);
 
   if (version[0] !== 5 || version[1] < 64) {
     log.error(`next-sw depends on webpack@5.64 but only webpack@${version[0]}.${version[1]} was found`);

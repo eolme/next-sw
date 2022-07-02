@@ -1,4 +1,4 @@
-import type { LoaderContext } from 'webpack';
+import type { WebpackLoaderContext } from './types';
 
 import { dynamic } from './utils';
 
@@ -6,7 +6,7 @@ const swc = dynamic('next/dist/build/swc');
 
 /** Simple SWC loader */
 export default function ServiceWorkerLoader(
-  this: LoaderContext<{ minify: boolean }>,
+  this: WebpackLoaderContext<{ minify: boolean }>,
   source: string
 ): string {
   const options = this.getOptions();

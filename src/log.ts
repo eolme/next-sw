@@ -1,15 +1,14 @@
+import type { ChalkFunction } from './types';
+
 import { dynamic } from './utils';
 
-type ChalkFunction = (str: string) => string;
-type Chalk = {
+let chalk: {
   cyan: ChalkFunction;
   red: ChalkFunction;
   yellow: ChalkFunction;
   green: ChalkFunction;
   magenta: ChalkFunction;
 };
-
-let chalk: Chalk;
 
 try {
   chalk = dynamic('next/dist/compiled/chalk');

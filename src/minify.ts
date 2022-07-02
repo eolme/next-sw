@@ -1,4 +1,4 @@
-import type { Compiler } from 'webpack';
+import type { WebpackCompiler } from './types';
 
 import { NAME, dynamic } from './utils';
 
@@ -11,8 +11,8 @@ const minify: MinifyFunction = swc.minifySync;
 
 /** Simple SWC minifier */
 export default function ServiceWorkerMinify(
-  this: Compiler,
-  compiler: Compiler
+  this: WebpackCompiler,
+  compiler: WebpackCompiler
 ) {
   compiler.hooks.compilation.tap(NAME, (compilation) => {
     const hooks = compiler.webpack.javascript.JavascriptModulesPlugin.getCompilationHooks(compilation);

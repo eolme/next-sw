@@ -1,8 +1,9 @@
-import type { NextConfig } from 'next';
 import type {
-  Configuration as WebpackConfiguration,
+  LooseExtend,
+  NextConfig,
+  WebpackConfiguration,
   WebpackPluginInstance
-} from 'webpack';
+} from './types';
 
 import { default as path } from 'path';
 
@@ -17,9 +18,13 @@ type ServiceWorkerConfig = {
   livereload?: boolean;
 };
 
-type NextConfigWithServiceWorker = NextConfig & {
+type NextConfigWithServiceWorker = {
+  basePath?: string;
+  webpack?: (config: WebpackConfiguration, context: { isServer: boolean; dev: boolean }) => WebpackConfiguration;
   serviceWorker?: ServiceWorkerConfig;
 };
+
+type NextConfigLoose = LooseExtend<NextConfig, NextConfigWithServiceWorker>;
 
 /**
  * Next ServiceWorker plugin
@@ -27,13 +32,13 @@ type NextConfigWithServiceWorker = NextConfig & {
  * @author Anton Petrov <eolme>
  * @see https://github.com/eolme/next-sw
  *
- * @param {NextConfigWithServiceWorker} nextConfig
- * @returns {NextConfig}
+ * @param {NextConfigLoose} nextConfig
+ * @returns {NextConfigLoose}
  */
-export default function withServiceWorker(nextConfig: NextConfigWithServiceWorker): NextConfig {
+export default function withServiceWorker(nextConfig: NextConfigLoose): NextConfigLoose {
   const nextConfigWebpack = nextConfig.webpack || ((config) => config);
 
-  const nextConfigPlugin: NextConfig = {
+  const nextConfigPlugin: NextConfigLoose = {
     webpack(config, context) {
       const resolvedConfig: WebpackConfiguration = nextConfigWebpack(config, context);
 
