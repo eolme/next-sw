@@ -1,6 +1,6 @@
 import type { AccessError, AnyFunction } from './types';
 
-import { constants, default as fs } from 'fs';
+import { accessSync, constants } from 'fs';
 import { default as path } from 'path';
 
 export const INJECT = 'main.js';
@@ -8,7 +8,7 @@ export const NAME = 'ServiceWorker';
 
 export const access = (file: string) => {
   try {
-    fs.accessSync(file, constants.R_OK);
+    accessSync(file, constants.R_OK);
 
     return null;
   } catch (ex: unknown) {
