@@ -1,6 +1,7 @@
 import type {
   ServiceWorkerBuildCallback,
   ServiceWorkerBuildConfig,
+  WebpackCompiler,
   WebpackFunction
 } from './types';
 
@@ -26,7 +27,7 @@ if ('version' in webpack) {
   }
 }
 
-export const build = (config: ServiceWorkerBuildConfig, callback: ServiceWorkerBuildCallback) => {
+export const build = (config: ServiceWorkerBuildConfig, callback: ServiceWorkerBuildCallback): WebpackCompiler => {
   return webpack({
     mode: config.dev ? 'development' : 'production',
     watch: config.dev,
