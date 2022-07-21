@@ -27,7 +27,39 @@ if ('version' in webpack) {
   }
 }
 
+const loader = path.resolve(__dirname, 'loader.js');
+
 export const build = (config: ServiceWorkerBuildConfig, callback: ServiceWorkerBuildCallback): WebpackCompiler => {
+  let rules;
+  let treeSharking = !config.dev;
+
+  if (typeof config.sideEffects === 'boolean') {
+    rules = [{
+      loader,
+      sideEffects: config.sideEffects,
+      options: {
+        minify: config.dev
+      }
+    }];
+
+    treeSharking = !config.sideEffects;
+  } else {
+    rules = [{
+      loader,
+      sideEffects: false,
+      exclude: config.sideEffects,
+      options: {
+        minify: config.dev
+      }
+    }, {
+      loader,
+      sideEffects: true,
+      options: {
+        minify: config.dev
+      }
+    }];
+  }
+
   return webpack({
     mode: config.dev ? 'development' : 'production',
     watch: config.dev,
@@ -58,11 +90,11 @@ export const build = (config: ServiceWorkerBuildConfig, callback: ServiceWorkerB
     optimization: {
       splitChunks: false,
       runtimeChunk: false,
-      concatenateModules: !config.dev,
-      mergeDuplicateChunks: !config.dev,
-      innerGraph: !config.dev,
-      providedExports: !config.dev,
-      usedExports: !config.dev,
+      concatenateModules: true,
+      mergeDuplicateChunks: true,
+      innerGraph: treeSharking,
+      providedExports: treeSharking,
+      usedExports: treeSharking,
       minimize: !config.dev,
       minimizer: [
         ServiceWorkerMinify
@@ -78,12 +110,7 @@ export const build = (config: ServiceWorkerBuildConfig, callback: ServiceWorkerB
         }
       }, {
         test: /\.(js|mjs|ts)$/,
-        use: {
-          loader: path.resolve(__dirname, 'loader.js'),
-          options: {
-            minify: config.dev
-          }
-        }
+        oneOf: rules
       }]
     },
     plugins: [

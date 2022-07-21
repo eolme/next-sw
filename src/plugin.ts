@@ -1,6 +1,6 @@
 import type {
-  LooseExtend,
-  NextConfig,
+  NextConfigLoose,
+  ServiceWorkerConfig,
   WebpackConfiguration,
   WebpackPluginInstance
 } from './types';
@@ -12,30 +12,16 @@ import { listen } from './livereload';
 import { build } from './build';
 import { log } from './log';
 
-type ServiceWorkerConfig = {
-  name?: string;
-  entry?: string;
-  livereload?: boolean;
-};
-
-type NextConfigWithServiceWorker = {
-  basePath?: string;
-  webpack?: (config: WebpackConfiguration, context: { isServer: boolean; dev: boolean }) => WebpackConfiguration;
-  serviceWorker?: ServiceWorkerConfig;
-};
-
-type NextConfigLoose = LooseExtend<NextConfig, NextConfigWithServiceWorker>;
-
 /**
  * Next ServiceWorker plugin
  *
  * @author Anton Petrov <eolme>
  * @see https://github.com/eolme/next-sw
  *
- * @param {NextConfigLoose} nextConfig
- * @returns {NextConfigLoose}
+ * @param {ServiceWorkerConfig} nextConfig
+ * @returns {(config: NextConfigLoose) => NextConfigLoose}
  */
-export default function withServiceWorker(nextConfig: NextConfigLoose): NextConfigLoose {
+export default (sw: ServiceWorkerConfig) => (nextConfig: NextConfigLoose): NextConfigLoose => {
   const nextConfigWebpack = nextConfig.webpack || ((config) => config);
 
   const nextConfigPlugin: NextConfigLoose = {
@@ -47,8 +33,8 @@ export default function withServiceWorker(nextConfig: NextConfigLoose): NextConf
       }
 
       if (
-        typeof nextConfig.serviceWorker !== 'object' ||
-        typeof nextConfig.serviceWorker.entry !== 'string'
+        typeof sw !== 'object' ||
+        typeof sw.entry !== 'string'
       ) {
         log.info('skipping building service worker');
 
@@ -56,7 +42,7 @@ export default function withServiceWorker(nextConfig: NextConfigLoose): NextConf
       }
 
       // Resolve entry
-      let _entry = nextConfig.serviceWorker.entry;
+      let _entry = sw.entry;
 
       if (!path.isAbsolute(_entry)) {
         _entry = path.resolve(process.cwd(), _entry);
@@ -68,22 +54,22 @@ export default function withServiceWorker(nextConfig: NextConfigLoose): NextConf
       const _access = access(_entry);
 
       if (_access !== null) {
-        log.error(`./${path.relative(process.cwd(), nextConfig.serviceWorker.entry)}`);
+        log.error(`./${path.relative(process.cwd(), sw.entry)}`);
         console.error('ENOENT: no such file or directory');
         process.exit(2);
       }
 
       let _emitEvent = noop;
 
-      if (typeof nextConfig.serviceWorker.livereload !== 'boolean') {
+      if (typeof sw.livereload !== 'boolean') {
         if (context.dev) {
           log.info('live reloading feature is enabled by default during development');
         }
 
-        nextConfig.serviceWorker.livereload = context.dev;
+        sw.livereload = context.dev;
       }
 
-      if (nextConfig.serviceWorker.livereload && context.dev) {
+      if (sw.livereload && context.dev) {
         // Start SSE server
         _emitEvent = listen(() => {
           log.ready('started live reloading server');
@@ -124,10 +110,10 @@ export default function withServiceWorker(nextConfig: NextConfigLoose): NextConf
       let _name = 'sw.js';
 
       if (
-        typeof nextConfig.serviceWorker.name === 'string' &&
-        nextConfig.serviceWorker.name !== ''
+        typeof sw.name === 'string' &&
+        sw.name !== ''
       ) {
-        _name = `${path.basename(nextConfig.serviceWorker.name, '.js')}.js`;
+        _name = `${path.basename(sw.name, '.js')}.js`;
       }
 
       // Extract DefinePlugin
@@ -147,13 +133,16 @@ export default function withServiceWorker(nextConfig: NextConfigLoose): NextConf
       // Use original resolve
       const _resolve = resolvedConfig.resolve!;
 
+      const _sideEffects = sw.sideEffects ?? true;
+
       build({
         dev: context.dev,
         name: _name,
         entry: _entry,
         public: _public,
         define: _define,
-        resolve: _resolve
+        resolve: _resolve,
+        sideEffects: _sideEffects
       }, (stats) => {
         if (stats.hasErrors()) {
           const error = stats.toJson({
@@ -208,4 +197,4 @@ export default function withServiceWorker(nextConfig: NextConfigLoose): NextConf
   };
 
   return Object.assign({}, nextConfig, nextConfigPlugin);
-}
+};

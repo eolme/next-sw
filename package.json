@@ -1,7 +1,7 @@
 {
   "name": "next-sw",
   "type": "commonjs",
-  "version": "1.3.0",
+  "version": "2.0.0",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "author": {
@@ -38,7 +38,7 @@
   "devDependencies": {
     "@mntm/eslint-config": "^1.2.0",
     "@types/webpack": "^5.28.0",
-    "eslint": "^8.19.0",
+    "eslint": "^8.20.0",
     "typescript": "^4.7.4"
   },
   "peerDependencies": {

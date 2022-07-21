@@ -35,6 +35,8 @@ export type AccessError = {
   path: string;
 };
 
+type SideEffects = boolean | string | RegExp | string[] | RegExp[] | ((file: string) => boolean);
+
 export type ServiceWorkerBuildConfig = {
   dev: boolean;
   name: string;
@@ -42,6 +44,21 @@ export type ServiceWorkerBuildConfig = {
   public: string;
   define: WebpackPluginInstance;
   resolve: WebpackResolveOptions;
+  sideEffects: SideEffects;
 };
 
 export type ServiceWorkerBuildCallback = (stats: WebpackStats) => void;
+
+export type ServiceWorkerConfig = {
+  name?: string;
+  entry?: string;
+  livereload?: boolean;
+  sideEffects?: SideEffects;
+};
+
+export type NextConfigTyped = {
+  basePath?: string;
+  webpack?: (config: WebpackConfiguration, context: { isServer: boolean; dev: boolean }) => WebpackConfiguration;
+};
+
+export type NextConfigLoose = LooseExtend<NextConfig, NextConfigTyped>;
