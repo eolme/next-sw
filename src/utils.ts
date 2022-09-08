@@ -83,8 +83,7 @@ export const terminateWith = (handler: () => void) => {
     // Self close
     'SIGINT',
     'SIGQUIT',
-    'SIGTERM',
-    'SIGSTOP'
+    'SIGTERM'
   ].forEach((signal) => {
     process.prependListener(signal as NodeJS.Signals, cb);
   });
