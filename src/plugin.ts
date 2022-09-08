@@ -8,6 +8,7 @@ import type {
 import { default as path } from 'path';
 
 import { INJECT, NAME, access, clearErrorStackTrace, noop, tapPromiseDelegate } from './utils';
+import { patchResolve } from './patch';
 import { listen } from './livereload';
 import { build } from './build';
 import { log } from './log';
@@ -21,7 +22,7 @@ import { log } from './log';
  * @param {ServiceWorkerConfig} nextConfig
  * @returns {(config: NextConfigLoose) => NextConfigLoose}
  */
-export default (sw: ServiceWorkerConfig) => (nextConfig: NextConfigLoose): NextConfigLoose => {
+export default (sw: ServiceWorkerConfig) => (nextConfig: NextConfigLoose = {}): NextConfigLoose => {
   const nextConfigWebpack = nextConfig.webpack || ((config) => config);
 
   const nextConfigPlugin: NextConfigLoose = {
@@ -131,7 +132,12 @@ export default (sw: ServiceWorkerConfig) => (nextConfig: NextConfigLoose): NextC
       });
 
       // Use original resolve
-      const _resolve = resolvedConfig.resolve!;
+      const _resolve = Object.assign({}, resolvedConfig.resolve);
+
+      // Patch resolve
+      if (sw.resolve) {
+        patchResolve(_resolve, sw.resolve === 'force');
+      }
 
       const _sideEffects = sw.sideEffects ?? true;
 
@@ -167,7 +173,7 @@ export default (sw: ServiceWorkerConfig) => (nextConfig: NextConfigLoose): NextC
         }
 
         if (_recompilationHash !== stats.compilation.fullHash) {
-          log.event('compiled service worker successfully');
+          log[context.dev ? 'event' : 'info']('compiled service worker successfully');
 
           if (context.dev && _recompilation) {
             log.wait('reloading...');

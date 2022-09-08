@@ -54,6 +54,7 @@ export type ServiceWorkerConfig = {
   entry?: string;
   livereload?: boolean;
   sideEffects?: SideEffects;
+  resolve?: boolean | 'force';
 };
 
 export type NextConfigTyped = {

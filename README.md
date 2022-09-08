@@ -21,12 +21,10 @@ There are options you can use to customize the behavior of this plugin by adding
 const { withServiceWorker } = require('next-sw');
 
 module.exports = withServiceWorker({
-  serviceWorker: {
-    name: 'sw.js',
-    entry: 'worker/entry.ts',
-    livereload: true
-  }
-});
+  name: 'sw.js',
+  entry: 'worker/entry.ts',
+  livereload: true
+})();
 ```
 
 ### Available Options
@@ -38,6 +36,9 @@ module.exports = withServiceWorker({
   - default to `true` during development
   - set `livereload: false` to disable live reloading
   - note: if the option is disabled, you need to use your own implementation of page reload
+- resolve: boolean | 'force' - patch resolve for worker support
+  - default to `false`
+  - set `'force'` to force patch
 
 ## Usage
 
@@ -53,10 +54,10 @@ if (typeof window !== 'undefined') {
 
 ## Installation
 
-Recommend to use [yarn](https://classic.yarnpkg.com/en/docs/install/) for dependency management:
+Recommend to use [yarn](https://yarnpkg.com/getting-started/install) for dependency management:
 
 ```shell
-yarn add next-sw
+yarn add -D next-sw
 ```
 
 ## License

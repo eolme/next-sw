@@ -53,7 +53,9 @@ export const tapPromiseDelegate = () => {
 };
 
 export const clearErrorStackTrace = (error: string) => {
-  return error.replace(/\n{3,}/g, '\n\n').replace(/^.*Module build failed.*$/m, '').replace(/^\s*at\s[\S\s]+/gm, '').trim();
+  return error.replace(/\n{3,}/g, '\n\n')
+    .replace(/^.*Module build failed.*$/m, '').replace(/^\s*at\s[\S\s]+/gm, '')
+    .trim();
 };
 
 export const once = (handler: () => void) => {
@@ -81,7 +83,8 @@ export const terminateWith = (handler: () => void) => {
     // Self close
     'SIGINT',
     'SIGQUIT',
-    'SIGTERM'
+    'SIGTERM',
+    'SIGSTOP'
   ].forEach((signal) => {
     process.prependListener(signal as NodeJS.Signals, cb);
   });
