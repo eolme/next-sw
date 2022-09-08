@@ -1,6 +1,6 @@
 import type { WebpackResolveOptions } from './types';
 
-const EXTENSIONS = ['.js', '.mjs', '.ts', '.json'];
+const EXTENSIONS = ['.js', '.mjs', '.ts'];
 
 export const patchResolve = (resolve: WebpackResolveOptions, force: boolean) => {
   if (Array.isArray(resolve.extensions)) {
