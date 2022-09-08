@@ -1,6 +1,7 @@
 import type { WebpackResolveOptions } from './types';
 
 const EXTENSIONS = ['.js', '.mjs', '.ts'];
+const WORKER = ['webworker', 'worker'];
 
 export const patchResolve = (resolve: WebpackResolveOptions, force: boolean) => {
   if (Array.isArray(resolve.extensions)) {
@@ -11,26 +12,26 @@ export const patchResolve = (resolve: WebpackResolveOptions, force: boolean) => 
 
   // Patch mainFields
   if (Array.isArray(resolve.mainFields)) {
-    resolve.mainFields = ['worker'].concat(resolve.mainFields.flat());
+    resolve.mainFields = WORKER.concat(resolve.mainFields.flat());
   }
 
   // Patch aliasFields
   if (Array.isArray(resolve.aliasFields)) {
-    resolve.mainFields = ['worker'].concat(resolve.aliasFields.flat());
+    resolve.mainFields = WORKER.concat(resolve.aliasFields.flat());
   }
 
   // Patch conditionNames
   if (Array.isArray(resolve.conditionNames) && (force || resolve.conditionNames.length > 0)) {
-    resolve.conditionNames = ['worker'].concat(resolve.conditionNames);
+    resolve.conditionNames = WORKER.concat(resolve.conditionNames);
   }
 
   // Patch exportsFields
   if (Array.isArray(resolve.exportsFields) && (force || resolve.exportsFields.length > 0)) {
-    resolve.conditionNames = ['worker'].concat(resolve.exportsFields);
+    resolve.conditionNames = WORKER.concat(resolve.exportsFields);
   }
 
   // Patch importsFields
   if (Array.isArray(resolve.importsFields) && (force || resolve.importsFields.length > 0)) {
-    resolve.conditionNames = ['worker'].concat(resolve.importsFields);
+    resolve.conditionNames = WORKER.concat(resolve.importsFields);
   }
 };
