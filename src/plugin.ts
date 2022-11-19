@@ -34,7 +34,7 @@ export default (sw: ServiceWorkerConfig) => (nextConfig: NextConfigLoose = {}): 
       }
 
       if (
-        typeof sw !== 'object' ||
+        typeof sw !== 'object' || sw === null ||
         typeof sw.entry !== 'string'
       ) {
         log.info('skipping building service worker');
