@@ -4,7 +4,7 @@ import { accessSync, constants } from 'fs';
 import { default as path } from 'path';
 
 export const INJECT = 'main.js';
-export const NAME = 'ServiceWorker';
+export const NAME = ':next-sw:';
 
 export const access = (file: string) => {
   try {
@@ -58,17 +58,20 @@ export const clearErrorStackTrace = (error: string) => {
     .trim();
 };
 
-export const once = (handler: () => void) => {
+export const once = <T extends AnyFunction>(handler: T): T => {
   let called = false;
+  let value: ReturnType<T> | null = null;
 
-  return () => {
+  return function(this: any) {
     if (called) {
-      return;
+      return value;
     }
 
-    handler();
+    value = Reflect.apply(handler, this, arguments);
     called = true;
-  };
+
+    return value;
+  } as T;
 };
 
 export const terminateWith = (handler: () => void) => {

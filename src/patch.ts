@@ -34,4 +34,6 @@ export const patchResolve = (resolve: WebpackResolveOptions, force: boolean) => 
   if (Array.isArray(resolve.importsFields) && (force || resolve.importsFields.length > 0)) {
     resolve.conditionNames = WORKER.concat(resolve.importsFields);
   }
+
+  return resolve;
 };

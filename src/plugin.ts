@@ -2,7 +2,8 @@ import type {
   NextConfigLoose,
   ServiceWorkerConfig,
   WebpackConfiguration,
-  WebpackPluginInstance
+  WebpackPluginInstance,
+  WebpackRecompilation
 } from './types';
 
 import { default as path } from 'path';
@@ -12,6 +13,7 @@ import { patchResolve } from './patch';
 import { listen } from './livereload';
 import { build } from './build';
 import { log } from './log';
+import { webpack } from './webpack';
 
 /**
  * Next ServiceWorker plugin
@@ -22,7 +24,11 @@ import { log } from './log';
  * @param {ServiceWorkerConfig} nextConfig
  * @returns {(config: NextConfigLoose) => NextConfigLoose}
  */
-export default (sw: ServiceWorkerConfig) => (nextConfig: NextConfigLoose = {}): NextConfigLoose => {
+export default (sw: ServiceWorkerConfig = {}) => (nextConfig: NextConfigLoose = {}): NextConfigLoose => {
+  // Clone config
+  nextConfig = Object.assign({}, nextConfig);
+
+  // Fallback webpack config
   const nextConfigWebpack = nextConfig.webpack || ((config) => config);
 
   const nextConfigPlugin: NextConfigLoose = {
@@ -33,34 +39,33 @@ export default (sw: ServiceWorkerConfig) => (nextConfig: NextConfigLoose = {}): 
         return resolvedConfig;
       }
 
-      if (
-        typeof sw !== 'object' || sw === null ||
-        typeof sw.entry !== 'string'
-      ) {
+      // Clone config
+      sw = Object.assign({}, sw);
+
+      if (typeof sw.entry !== 'string') {
         log.info('skipping building service worker');
 
         return resolvedConfig;
       }
 
-      // Resolve entry
-      let _entry = sw.entry;
+      // Resolve webpack
+      const pack = webpack(context.webpack);
 
-      if (!path.isAbsolute(_entry)) {
-        _entry = path.resolve(process.cwd(), _entry);
+      // Resolve entry
+      if (!path.isAbsolute(sw.entry)) {
+        sw.entry = path.resolve(process.cwd(), sw.entry);
       } else {
-        _entry = path.normalize(_entry);
+        sw.entry = path.normalize(sw.entry);
       }
 
       // Check if entry is accessible
-      const _access = access(_entry);
-
-      if (_access !== null) {
+      if (access(sw.entry) !== null) {
         log.error(`./${path.relative(process.cwd(), sw.entry)}`);
         console.error('ENOENT: no such file or directory');
         process.exit(2);
       }
 
-      let _emitEvent = noop;
+      let emit = noop;
 
       if (typeof sw.livereload !== 'boolean') {
         if (context.dev) {
@@ -71,8 +76,12 @@ export default (sw: ServiceWorkerConfig) => (nextConfig: NextConfigLoose = {}): 
       }
 
       if (sw.livereload && context.dev) {
+        if (typeof sw.port !== 'number' || Number.isNaN(sw.port)) {
+          sw.port = 4000;
+        }
+
         // Start SSE server
-        _emitEvent = listen(() => {
+        emit = listen(sw.port, () => {
           log.ready('started live reloading server');
         });
 
@@ -96,95 +105,100 @@ export default (sw: ServiceWorkerConfig) => (nextConfig: NextConfigLoose = {}): 
         };
       }
 
-      // Recompilation status
-      let _recompilation = false;
-      let _recompilationHash: string | null | undefined = null;
-      let _recompilationError = '';
-
       // It is necessary to delegate state of own compilation
-      const _sync = tapPromiseDelegate();
+      const sync = tapPromiseDelegate();
 
       // Resolve public folder
-      const _public = path.resolve(process.cwd(), 'public');
+      const dest = path.resolve(process.cwd(), 'public');
 
       // Resolve name
-      let _name = 'sw.js';
-
-      if (
-        typeof sw.name === 'string' &&
-        sw.name !== ''
-      ) {
-        _name = `${path.basename(sw.name, '.js')}.js`;
+      if (typeof sw.name === 'string' && sw.name.length > 0) {
+        // Fix extension
+        sw.name = `${path.basename(sw.name, '.js')}.js`;
+      } else {
+        sw.name = 'sw.js';
       }
 
       // Extract DefinePlugin
-      const _define = resolvedConfig.plugins!.find((plugin) => {
+      const define = resolvedConfig.plugins!.find((plugin) => {
         return plugin.constructor.name === 'DefinePlugin';
       }) as WebpackPluginInstance;
 
       // Resolve scope
-      const _scope = nextConfig.basePath ? `${nextConfig.basePath}/` : '/';
+      const scope = nextConfig.basePath ? `${nextConfig.basePath}/` : '/';
 
       // Inject env
-      Object.assign(_define.definitions!, {
-        'process.env.__NEXT_SW': `'${_scope}${_name}'`,
-        'process.env.__NEXT_SW_SCOPE': `'${_scope}'`
+      Object.assign(define.definitions!, {
+        'process.env.__NEXT_SW': `'${scope}${sw.name}'`,
+        'process.env.__NEXT_SW_SCOPE': `'${scope}'`,
+        'process.env.__NEXT_SW_PORT': `'${sw.port}'`
       });
 
       // Use original resolve
-      const _resolve = Object.assign({}, resolvedConfig.resolve);
+      const resolve = Object.assign({}, resolvedConfig.resolve);
 
       // Patch resolve
       if (sw.resolve) {
-        patchResolve(_resolve, sw.resolve === 'force');
+        patchResolve(resolve, sw.resolve === 'force');
       }
 
-      const _sideEffects = sw.sideEffects ?? true;
+      const recompilation: WebpackRecompilation = {
+        status: false,
+        hash: null,
+        error: ''
+      };
 
-      build({
+      build(pack, {
         dev: context.dev,
-        name: _name,
-        entry: _entry,
-        public: _public,
-        define: _define,
-        resolve: _resolve,
-        sideEffects: _sideEffects
+        name: sw.name,
+        entry: sw.entry,
+        dest,
+        define,
+        resolve,
+        sideEffects: sw.sideEffects ?? true
       }, (stats) => {
         if (stats.hasErrors()) {
-          const error = stats.toJson({
+          const stat = stats.toJson({
             all: false,
             errors: true
-          }).errors![0];
+          });
 
-          const _error = clearErrorStackTrace(error.message);
+          if (
+            typeof stat.errors === 'object' && stat.errors !== null &&
+            stat.errors.length > 0
+          ) {
+            const error = clearErrorStackTrace(stat.errors[0].message);
 
-          if (_recompilationError !== _error) {
-            _recompilationError = _error;
+            // Prevent spam with same error
+            if (recompilation.error !== error) {
+              recompilation.error = error;
 
-            log.error(error.moduleName!);
-            console.error(_recompilationError);
+              log.error(stat.moduleName!);
+              console.error(recompilation.error);
 
-            if (context.dev) {
-              _emitEvent('error');
-            } else {
-              process.exit(1);
+              if (context.dev) {
+                emit('error');
+              } else {
+                process.exit(1);
+              }
             }
           }
         }
 
-        if (_recompilationHash !== stats.compilation.fullHash) {
+        // Prevent reload with same output
+        if (recompilation.hash !== stats.compilation.fullHash) {
           log[context.dev ? 'event' : 'info']('compiled service worker successfully');
 
-          if (context.dev && _recompilation) {
+          if (context.dev && recompilation.status) {
             log.wait('reloading...');
 
-            _emitEvent('reload');
+            emit('reload');
           } else {
-            _sync.resolve();
+            sync.resolve();
           }
 
-          _recompilation = true;
-          _recompilationHash = stats.compilation.fullHash;
+          recompilation.status = true;
+          recompilation.hash = stats.compilation.fullHash;
         }
 
         // Nothing to show
@@ -194,7 +208,7 @@ export default (sw: ServiceWorkerConfig) => (nextConfig: NextConfigLoose = {}): 
       resolvedConfig.plugins!.push({
         name: NAME,
         apply(compiler) {
-          compiler.hooks.done.tapPromise(NAME, () => _sync.promise);
+          compiler.hooks.done.tapPromise(NAME, () => sync.promise);
         }
       });
 

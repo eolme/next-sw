@@ -9,20 +9,68 @@ export type { };
  * @description Runtime client
  */
 
-/** */
+const unsupported = (reason: string): never => {
+  console.error('[next-sw] LiveReloading is unsupported.');
+  throw new TypeError(reason);
+};
+
+// Check environment
+// Checking is ugly, but necessary to avoid mistakes
+if (typeof location !== 'object') {
+  unsupported('location is not a object');
+}
+
+if (typeof location.origin !== 'string') {
+  unsupported('location.origin is not a string');
+}
+
+if (typeof location.reload !== 'function') {
+  unsupported('location.reload is not a function');
+}
+
+if (typeof navigator !== 'object') {
+  unsupported('navigator is not a object');
+}
+
+if (typeof navigator.serviceWorker !== 'object') {
+  unsupported('navigator.serviceWorker is not a object');
+}
+
+if (typeof navigator.serviceWorker.register !== 'function') {
+  unsupported('navigator.serviceWorker.register is not a function');
+}
+
+if (typeof EventSource !== 'function') {
+  unsupported('EventSource is not a constructor');
+}
+
+if (typeof URL !== 'function') {
+  unsupported('URL is not a constructor');
+}
+
+const URLPortDescriptor = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(URL), 'port');
+
+if (
+  typeof URLPortDescriptor === 'undefined' ||
+  (URLPortDescriptor.writable !== true && typeof URLPortDescriptor.set !== 'function')
+) {
+  unsupported('URL.prototype.port is not writeable');
+}
+
+// Original ServiceWorkerContainer
 const sw = navigator.serviceWorker;
 
 // Preserve original register
 const register = sw.register;
 
-// Preserve registrations
+// Preserve own registrations
 const registrations: ServiceWorkerRegistration[] = [];
 
 // Unregister all workers
 const unregister = function unregister() {
   return Promise.all(registrations.map((registration) => {
     return registration.unregister().catch((ex: unknown) => {
-      console.error(`[ServiceWorker] Unregistration failed: ${ex}`);
+      console.error(`[next-sw] Unregistration failed: ${ex}`);
 
       return false;
     });
@@ -48,21 +96,21 @@ Object.defineProperty(sw, 'register', {
 const url = new URL('/', location.origin);
 
 // Live Reloading port
-url.port = '4000';
+url.port = process.env.__NEXT_SW_PORT || '4000';
 
-/** */
+// Live Reloading
 const source = new EventSource(url);
 
 // Handle control messages
 source.onmessage = function onmessage(event) {
   if (event.data === 'error') {
-    console.error('[ServiceWorker] Errors while compiling. Reload prevented.');
+    console.error('[next-sw] Errors while compiling. Reload prevented.');
 
     return;
   }
 
   if (event.data === 'reload') {
-    console.log('[ServiceWorker] Update detected. Reloading...');
+    console.log('[next-sw] Update detected. Reloading...');
 
     unregister().then(() => {
       location.reload();
@@ -71,10 +119,18 @@ source.onmessage = function onmessage(event) {
     return;
   }
 
-  console.warn(`[ServiceWorker] Unsupported event detected: ${event.data}`);
+  console.warn(`[next-sw] Unsupported event detected: ${event.data}`);
 };
 
 // Handle error aka disconnect
 source.onerror = function onerror() {
-  console.error('[ServiceWorker] Server has disconnected.');
+  if (source.readyState !== source.CLOSED) {
+    try {
+      source.close();
+    } catch (ex: unknown) {
+      console.error(ex);
+    }
+  }
+
+  console.error('[next-sw] Server has disconnected.');
 };

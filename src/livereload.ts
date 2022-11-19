@@ -6,7 +6,7 @@ import { setImmediate } from 'timers';
 import { splice, terminateWith } from './utils';
 
 /** Simple SSE server implementation */
-export const listen = (ready: () => void) => {
+export const listen = (port: number, ready: () => void) => {
   const clients: ServerResponse[] = [];
 
   const server = createServer((req, res) => {
@@ -44,7 +44,7 @@ export const listen = (ready: () => void) => {
   server.requestTimeout = 0;
   server.keepAliveTimeout = 0;
 
-  server.listen(4000, ready);
+  server.listen(port, ready);
   terminateWith(() => server.close());
 
   return (event: string) => {

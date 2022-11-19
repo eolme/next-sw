@@ -6,30 +6,15 @@ import type {
 } from './types';
 
 import { default as path } from 'path';
-
-import { log } from './log';
-import { dynamic } from './utils';
 import { default as ServiceWorkerMinify } from './minify';
-
-let webpack: WebpackFunction;
-
-try {
-  webpack = dynamic('next/dist/compiled/bundle5')().webpack;
-} catch {
-  webpack = dynamic('webpack');
-}
-if ('version' in webpack) {
-  const version = (webpack as any).version.split('.').map(Number);
-
-  if (version[0] !== 5 || version[1] < 64) {
-    log.error(`next-sw depends on webpack@5.64 but only webpack@${version[0]}.${version[1]} was found`);
-    process.exit(2);
-  }
-}
 
 const loader = path.resolve(__dirname, 'loader.js');
 
-export const build = (config: ServiceWorkerBuildConfig, callback: ServiceWorkerBuildCallback): WebpackCompiler => {
+export const build = (
+  webpack: WebpackFunction,
+  config: ServiceWorkerBuildConfig,
+  callback: ServiceWorkerBuildCallback
+): WebpackCompiler => {
   let rules;
   let treeSharking = !config.dev;
 
@@ -84,7 +69,7 @@ export const build = (config: ServiceWorkerBuildConfig, callback: ServiceWorkerB
       chunkFormat: false,
       globalObject: 'self',
       iife: false,
-      path: config.public,
+      path: config.dest,
       filename: config.name
     },
     optimization: {

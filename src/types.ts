@@ -5,6 +5,12 @@ export type LooseExtend<L, T> = 0 extends (1 & L) ? T : L & T;
 // @ts-ignore unresolved
 export type NextConfig = import('next').NextConfig;
 
+export type NextConfigContext = {
+  isServer: boolean;
+  dev: boolean;
+  webpack?: WebpackFunction;
+};
+
 // @ts-ignore unresolved
 export type WebpackConfiguration = import('webpack').Configuration;
 
@@ -41,7 +47,7 @@ export type ServiceWorkerBuildConfig = {
   dev: boolean;
   name: string;
   entry: string;
-  public: string;
+  dest: string;
   define: WebpackPluginInstance;
   resolve: WebpackResolveOptions;
   sideEffects: SideEffects;
@@ -55,11 +61,18 @@ export type ServiceWorkerConfig = {
   livereload?: boolean;
   sideEffects?: SideEffects;
   resolve?: boolean | 'force';
+  port?: number;
 };
 
 export type NextConfigTyped = {
   basePath?: string;
-  webpack?: (config: WebpackConfiguration, context: { isServer: boolean; dev: boolean }) => WebpackConfiguration;
+  webpack?: (config: WebpackConfiguration, context: NextConfigContext) => WebpackConfiguration;
 };
 
 export type NextConfigLoose = LooseExtend<NextConfig, NextConfigTyped>;
+
+export type WebpackRecompilation = {
+  status: boolean;
+  hash: string | null | undefined;
+  error: string;
+};
