@@ -48,7 +48,7 @@ if (typeof URL !== 'function') {
   unsupported('URL is not a constructor');
 }
 
-const URLPortDescriptor = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(URL), 'port');
+const URLPortDescriptor = Object.getOwnPropertyDescriptor(URL.prototype, 'port');
 
 if (
   typeof URLPortDescriptor === 'undefined' ||
