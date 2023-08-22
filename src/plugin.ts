@@ -2,31 +2,28 @@ import type {
   NextConfigLoose,
   ServiceWorkerConfig,
   WebpackConfiguration,
-  WebpackPluginInstance,
   WebpackRecompilation
-} from './types';
+} from './types.js';
 
 import { default as path } from 'path';
 
-import { INJECT, NAME, access, clearErrorStackTrace, noop, tapPromiseDelegate } from './utils';
-import { patchResolve } from './patch';
-import { listen } from './livereload';
-import { build } from './build';
-import { log } from './log';
-import { webpack } from './webpack';
+import { NAME, access, clearErrorStackTrace, inject, noop, tapPromiseDelegate } from './utils.js';
+import { patchResolve } from './patch.js';
+import { listen } from './livereload.js';
+import { build } from './build.js';
+import { log } from './log.js';
+import { ensureWebpack } from './webpack.js';
+import { RELOAD, WAIT } from './events.js';
 
 /**
  * Next ServiceWorker plugin
  *
  * @author Anton Petrov <eolme>
  * @see https://github.com/eolme/next-sw
- *
- * @param {ServiceWorkerConfig} nextConfig
- * @returns {(config: NextConfigLoose) => NextConfigLoose}
  */
-export default (sw: ServiceWorkerConfig = {}) => (nextConfig: NextConfigLoose = {}): NextConfigLoose => {
+export default (sw: ServiceWorkerConfig = {}) => <T>(userNextConfig: T): T => {
   // Clone config
-  nextConfig = Object.assign({}, nextConfig);
+  const nextConfig = Object.assign({}, userNextConfig) as NextConfigLoose;
 
   // Fallback webpack config
   const nextConfigWebpack = nextConfig.webpack || ((config) => config);
@@ -49,7 +46,7 @@ export default (sw: ServiceWorkerConfig = {}) => (nextConfig: NextConfigLoose = 
       }
 
       // Resolve webpack
-      const pack = webpack(context.webpack);
+      const webpack = ensureWebpack(context.webpack);
 
       // Resolve entry
       if (!path.isAbsolute(sw.entry)) {
@@ -65,6 +62,13 @@ export default (sw: ServiceWorkerConfig = {}) => (nextConfig: NextConfigLoose = 
         process.exit(2);
       }
 
+      if (
+        typeof sw.port !== 'number' ||
+        !Number.isInteger(sw.port)
+      ) {
+        sw.port = 4000;
+      }
+
       let emit = noop;
 
       if (typeof sw.livereload !== 'boolean') {
@@ -76,13 +80,9 @@ export default (sw: ServiceWorkerConfig = {}) => (nextConfig: NextConfigLoose = 
       }
 
       if (sw.livereload && context.dev) {
-        if (typeof sw.port !== 'number' || Number.isNaN(sw.port)) {
-          sw.port = 4000;
-        }
-
         // Start SSE server
-        emit = listen(sw.port, () => {
-          log.ready('started live reloading server');
+        emit = listen(sw.port, (address) => {
+          log.ready(`started live reloading server on ${address}`);
         });
 
         const client = path.resolve(__dirname, 'client.js');
@@ -90,19 +90,7 @@ export default (sw: ServiceWorkerConfig = {}) => (nextConfig: NextConfigLoose = 
         // Inject client
         const resolvedEntry = resolvedConfig.entry as (() => Promise<Record<string, string[]>>);
 
-        resolvedConfig.entry = () => {
-          return resolvedEntry().then((entry) => {
-            const inject = entry[INJECT];
-
-            if (!inject.includes(client)) {
-              log.info('live reloading client injected');
-
-              inject.unshift(client);
-            }
-
-            return entry;
-          });
-        };
+        resolvedConfig.entry = () => resolvedEntry().then((entry) => inject(client, entry));
       }
 
       // It is necessary to delegate state of own compilation
@@ -119,20 +107,27 @@ export default (sw: ServiceWorkerConfig = {}) => (nextConfig: NextConfigLoose = 
         sw.name = 'sw.js';
       }
 
-      // Extract DefinePlugin
-      const define = resolvedConfig.plugins!.find((plugin) => {
-        return plugin.constructor.name === 'DefinePlugin';
-      }) as WebpackPluginInstance;
-
       // Resolve scope
       const scope = nextConfig.basePath ? `${nextConfig.basePath}/` : '/';
 
-      // Inject env
-      Object.assign(define.definitions!, {
-        'process.env.__NEXT_SW': `'${scope}${sw.name}'`,
-        'process.env.__NEXT_SW_SCOPE': `'${scope}'`,
-        'process.env.__NEXT_SW_PORT': `'${sw.port}'`
-      });
+      const originalDefinePlugin = (resolvedConfig.plugins || []).find((plugin) => plugin.constructor.name === 'DefinePlugin');
+      const originalDefinesRaw = ((originalDefinePlugin || {}) as { definitions?: Record<string, string> }).definitions || {};
+      const originalDefines = JSON.parse(JSON.stringify(originalDefinesRaw));
+
+      process.env.__NEXT_SW = `"${scope}${sw.name}"`;
+      process.env.__NEXT_SW_SCOPE = `"${scope}"`;
+      process.env.__NEXT_SW_PORT = `"${sw.port}"`;
+
+      const pluginDefines = {
+        'process.env.__NEXT_SW': `"${scope}${sw.name}"`,
+        'process.env.__NEXT_SW_SCOPE': `"${scope}"`,
+        'process.env.__NEXT_SW_PORT': `"${sw.port}"`
+      };
+
+      const defines = Object.assign({}, originalDefines, pluginDefines);
+
+      // Apply defines
+      resolvedConfig.plugins!.push(new webpack.DefinePlugin(pluginDefines));
 
       // Use original resolve
       const resolve = Object.assign({}, resolvedConfig.resolve);
@@ -148,12 +143,13 @@ export default (sw: ServiceWorkerConfig = {}) => (nextConfig: NextConfigLoose = 
         error: ''
       };
 
-      build(pack, {
+      build(webpack, {
         dev: context.dev,
         name: sw.name,
         entry: sw.entry,
         dest,
-        define,
+        define: new webpack.DefinePlugin(defines),
+        defines,
         resolve,
         sideEffects: sw.sideEffects ?? true
       }, (stats) => {
@@ -177,22 +173,31 @@ export default (sw: ServiceWorkerConfig = {}) => (nextConfig: NextConfigLoose = 
               console.error(recompilation.error);
 
               if (context.dev) {
-                emit('error');
-              } else {
-                process.exit(1);
+                emit(WAIT, recompilation.hash);
+
+                return;
               }
+
+              process.exit(1);
             }
           }
         }
 
         // Prevent reload with same output
         if (recompilation.hash !== stats.compilation.fullHash) {
-          log[context.dev ? 'event' : 'info']('compiled service worker successfully');
+          const time = (stats.compilation.endTime || 0) - (stats.compilation.startTime || 0);
+          const formattedTime = time > 2000 ?
+            `${Math.round(time / 100) / 10}s` :
+            `${time} ms`;
+
+          const formattedModules = `(${stats.compilation.modules.size} modules)`;
+
+          log[context.dev ? 'event' : 'info'](`compiled service worker successfully in ${formattedTime} ${formattedModules}`);
 
           if (context.dev && recompilation.status) {
             log.wait('reloading...');
 
-            emit('reload');
+            emit(RELOAD, recompilation.hash);
           } else {
             sync.resolve();
           }
@@ -216,5 +221,5 @@ export default (sw: ServiceWorkerConfig = {}) => (nextConfig: NextConfigLoose = 
     }
   };
 
-  return Object.assign({}, nextConfig, nextConfigPlugin);
+  return Object.assign({}, nextConfig, nextConfigPlugin) as T;
 };

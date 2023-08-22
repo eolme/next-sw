@@ -1,10 +1,60 @@
-import type { AccessError, AnyFunction } from './types';
+import type { AddressInfo } from 'net';
+import type { AccessError, AnyFunction } from './types.js';
 
 import { accessSync, constants } from 'fs';
-import { default as path } from 'path';
+import { log } from './log.js';
 
-export const INJECT = 'main.js';
-export const NAME = ':next-sw:';
+const INJECT_ENTRY_POINTS = [
+  'main-app',
+  'pages/_app'
+];
+
+export const inject = (client: string, entry: Record<string, string | string[]>) => {
+  let injected = false;
+
+  INJECT_ENTRY_POINTS.forEach((point) => {
+    if (point in entry) {
+      const files = entry[point];
+
+      if (typeof files === 'string') {
+        injected = true;
+
+        if (files === client) {
+          return;
+        }
+
+        log.info(`live reload client is injected to "${point}"`);
+
+        entry[point] = [
+          client,
+          files
+        ];
+
+        return;
+      }
+
+      if (Array.isArray(files)) {
+        injected = true;
+
+        if (files.includes(client)) {
+          return;
+        }
+
+        log.info(`live reload client is injected to "${point}"`);
+
+        files.unshift(client);
+      }
+    }
+  });
+
+  if (!injected) {
+    log.error('live reload client is not injected\n  open new issue with config info\n  https://github.com/eolme/next-sw/issues/new');
+  }
+
+  return entry;
+};
+
+export const NAME = ':next:sw:';
 
 export const access = (file: string) => {
   try {
@@ -13,22 +63,6 @@ export const access = (file: string) => {
     return null;
   } catch (ex: unknown) {
     return ex as AccessError;
-  }
-};
-
-// eslint-disable-next-line global-require, @typescript-eslint/no-require-imports
-export const dynamic = (id: string) => require(require.resolve(id, {
-  paths: [
-    process.cwd(),
-    path.resolve(__dirname, '..')
-  ]
-}));
-
-export const splice = (arr: unknown[], item: unknown) => {
-  const index = arr.indexOf(item);
-
-  if (index !== -1) {
-    arr.splice(index, 1);
   }
 };
 
@@ -53,8 +87,10 @@ export const tapPromiseDelegate = () => {
 };
 
 export const clearErrorStackTrace = (error: string) => {
+  /* eslint-disable unicorn/prefer-string-replace-all */
   return error.replace(/\n{3,}/g, '\n\n')
-    .replace(/^.*Module build failed.*$/m, '').replace(/^\s*at\s[\S\s]+/gm, '')
+    .replace(/^.*Module build failed.*$/m, '')
+    .replace(/^\s*at\s[\S\s]+/gm, '')
     .trim();
 };
 
@@ -78,16 +114,30 @@ export const terminateWith = (handler: () => void) => {
   const cb = once(handler);
 
   [
-    // Parent close
     'SIGHUP',
-    'SIGPIPE',
-    'SIGUSR2',
-
-    // Self close
     'SIGINT',
     'SIGQUIT',
     'SIGTERM'
   ].forEach((signal) => {
     process.prependListener(signal as NodeJS.Signals, cb);
   });
+
+  process.prependListener('beforeExit', cb);
+  process.prependListener('exit', cb);
+};
+
+export const formatAddress = (address: AddressInfo | string | null) => {
+  if (address == null) {
+    return '<unknown>';
+  }
+
+  if (typeof address === 'string') {
+    return address;
+  }
+
+  if (address.family === 'IPv6') {
+    return `[${address.address}]:${address.port}`;
+  }
+
+  return `${address.address}:${address.port}`;
 };

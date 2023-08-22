@@ -1,4 +1,4 @@
-import type { WebpackResolveOptions } from './types';
+import type { WebpackResolveOptions } from './types.js';
 
 const EXTENSIONS = ['.js', '.mjs', '.ts'];
 const WORKER = ['webworker', 'worker'];
@@ -17,7 +17,7 @@ export const patchResolve = (resolve: WebpackResolveOptions, force: boolean) => 
 
   // Patch aliasFields
   if (Array.isArray(resolve.aliasFields)) {
-    resolve.mainFields = WORKER.concat(resolve.aliasFields.flat());
+    resolve.aliasFields = WORKER.concat(resolve.aliasFields.flat());
   }
 
   // Patch conditionNames
@@ -27,12 +27,7 @@ export const patchResolve = (resolve: WebpackResolveOptions, force: boolean) => 
 
   // Patch exportsFields
   if (Array.isArray(resolve.exportsFields) && (force || resolve.exportsFields.length > 0)) {
-    resolve.conditionNames = WORKER.concat(resolve.exportsFields);
-  }
-
-  // Patch importsFields
-  if (Array.isArray(resolve.importsFields) && (force || resolve.importsFields.length > 0)) {
-    resolve.conditionNames = WORKER.concat(resolve.importsFields);
+    resolve.exportsFields = WORKER.concat(resolve.exportsFields);
   }
 
   return resolve;

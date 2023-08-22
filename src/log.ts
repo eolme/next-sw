@@ -1,6 +1,6 @@
-import type { ChalkFunction } from './types';
+import type { ChalkFunction } from './types.js';
 
-import { dynamic } from './utils';
+import { dynamic } from './dynamic.js';
 
 let chalk: {
   cyan: ChalkFunction;
@@ -17,12 +17,12 @@ try {
 }
 
 const prefixes = {
-  wait: `${chalk.cyan('wait')}  -`,
-  error: `${chalk.red('error')} -`,
-  warn: `${chalk.yellow('warn')}  -`,
-  ready: `${chalk.green('ready')} -`,
-  info: `${chalk.cyan('info')}  -`,
-  event: `${chalk.magenta('event')} -`
+  wait: `- ${chalk.cyan('wait')}`,
+  error: `- ${chalk.red('error')}`,
+  warn: `- ${chalk.yellow('warn')}`,
+  ready: `- ${chalk.green('ready')}`,
+  info: `- ${chalk.cyan('info')}`,
+  event: `- ${chalk.magenta('event')}`
 };
 
 export const log = {

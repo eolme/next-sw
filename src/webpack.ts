@@ -1,71 +1,46 @@
-import type { WebpackFunction } from './types';
+import type { Webpack } from './types.js';
 
-import { log } from './log';
-import { dynamic } from './utils';
+import { dynamic } from './dynamic.js';
+import { log } from './log.js';
 
-const semver = (fn: any) => {
-  const version = fn.version;
-
+const semver = (version: string) => {
   if (typeof version === 'string') {
-    return version.split('.').map(Number);
+    return version.split('.').slice(0, 3).map(Number);
   }
 
   return [0, 0, 0];
 };
 
-const valid = (version: number[]) => version[0] === 5 && version[1] >= 64;
+const valid = (fn?: Webpack): fn is Webpack =>
+  typeof fn === 'function' &&
+  typeof fn.version === 'string' &&
+  typeof fn.DefinePlugin === 'function';
 
-export const webpack = (fn?: WebpackFunction): WebpackFunction => {
+export const ensureWebpack = (webpack?: Webpack): Webpack => {
   let version = [0, 0, 0];
 
-  // Check provided
-  if (
-    typeof fn === 'function' &&
-    'version' in fn
-  ) {
-    version = semver(fn);
+  const available = [
+    () => webpack,
+    () => dynamic('next/dist/compiled/webpack/bundle5')().webpack,
+    () => dynamic('webpack')
+  ];
 
-    if (valid(version)) {
-      return fn;
-    }
-  }
+  for (const check of available) {
+    try {
+      const provided = check();
 
-  // Check compiled
-  try {
-    fn = dynamic('next/dist/compiled/webpack/bundle5')().webpack;
+      if (valid(provided)) {
+        version = semver(provided.version);
 
-    if (
-      typeof fn === 'function' &&
-      'version' in fn
-    ) {
-      version = semver(fn);
-
-      if (valid(version)) {
-        return fn;
+        if (version[0] === 5 && version[1] >= 64) {
+          return provided;
+        }
       }
+    } catch {
+      // Ignore
     }
-  } catch {
-    // Ignore
   }
 
-  // Check external
-  try {
-    fn = dynamic('webpack');
-
-    if (
-      typeof fn === 'function' &&
-      'version' in fn
-    ) {
-      version = semver(fn);
-
-      if (valid(version)) {
-        return fn;
-      }
-    }
-  } catch {
-    // Ignore
-  }
-
-  log.error(`next-sw depends on at least webpack@5.64 but only webpack@${version[0]}.${version[1]} was found`);
+  log.error(`next-sw depends on at least webpack@5.64.0 but only webpack@${version[0] || 0}.${version[1] || 0}.${version[2] || 0} was found`);
   process.exit(2);
 };

@@ -1,12 +1,15 @@
-import type { WebpackLoaderContext } from './types';
+import type { WebpackLoaderContext } from './types.js';
 
-import { dynamic } from './utils';
+import { dynamic } from './dynamic.js';
 
 const swc = dynamic('next/dist/build/swc');
 
 /** Simple SWC loader */
 export default function ServiceWorkerLoader(
-  this: WebpackLoaderContext<{ minify: boolean }>,
+  this: WebpackLoaderContext<{
+    minify: boolean;
+    defines: Record<string, string>;
+  }>,
   source: string
 ): string {
   const options = this.getOptions();
@@ -29,10 +32,7 @@ export default function ServiceWorkerLoader(
       transform: {
         optimizer: {
           globals: {
-            vars: {
-              'globalThis': 'self',
-              'process.env.NODE_ENV': options.minify ? '"production"' : '"development"'
-            },
+            vars: options.defines,
             typeofs: {
               window: 'undefined',
               document: 'undefined'

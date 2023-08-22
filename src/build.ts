@@ -1,30 +1,32 @@
 import type {
   ServiceWorkerBuildCallback,
   ServiceWorkerBuildConfig,
-  WebpackCompiler,
-  WebpackFunction
-} from './types';
+  Webpack
+} from './types.js';
 
 import { default as path } from 'path';
-import { default as ServiceWorkerMinify } from './minify';
+import { default as ServiceWorkerMinify } from './minify.js';
 
 const loader = path.resolve(__dirname, 'loader.js');
 
 export const build = (
-  webpack: WebpackFunction,
+  webpack: Webpack,
   config: ServiceWorkerBuildConfig,
   callback: ServiceWorkerBuildCallback
-): WebpackCompiler => {
+) => {
   let rules;
   let treeSharking = !config.dev;
+
+  const options = {
+    minify: config.dev,
+    defines: config.defines
+  };
 
   if (typeof config.sideEffects === 'boolean') {
     rules = [{
       loader,
       sideEffects: config.sideEffects,
-      options: {
-        minify: config.dev
-      }
+      options
     }];
 
     treeSharking = !config.sideEffects;
@@ -33,15 +35,11 @@ export const build = (
       loader,
       sideEffects: false,
       exclude: config.sideEffects,
-      options: {
-        minify: config.dev
-      }
+      options
     }, {
       loader,
       sideEffects: true,
-      options: {
-        minify: config.dev
-      }
+      options
     }];
   }
 

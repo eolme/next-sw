@@ -2,35 +2,25 @@
 
 export type LooseExtend<L, T> = 0 extends (1 & L) ? T : L & T;
 
-// @ts-ignore unresolved
 export type NextConfig = import('next').NextConfig;
+export type Webpack = typeof import('webpack');
 
 export type NextConfigContext = {
   isServer: boolean;
   dev: boolean;
-  webpack?: WebpackFunction;
+  webpack?: Webpack;
 };
 
-// @ts-ignore unresolved
-export type WebpackConfiguration = import('webpack').Configuration;
+export type WebpackStats = InstanceType<Webpack['Stats']>;
+export type WebpackCompiler = InstanceType<Webpack['Compiler']>;
+export type WebpackDefinePlugin = Webpack['DefinePlugin'];
 
-// @ts-ignore unresolved
-export type WebpackStats = import('webpack').Stats;
+export type WebpackConfiguration = Parameters<Webpack>[0][0];
+export type WebpackResolveOptions = NonNullable<WebpackConfiguration['resolve']>;
 
-// @ts-ignore unresolved
-export type WebpackCompiler = import('webpack').Compiler;
-
-// @ts-ignore unresolved
-export type WebpackPluginInstance = import('webpack').WebpackPluginInstance;
-
-// @ts-ignore unresolved
-export type WebpackResolveOptions = import('webpack').ResolveOptions;
-
-// @ts-ignore unresolved
-export type WebpackLoaderContext<T> = import('webpack').LoaderContext<T>;
-
-export type WebpackCallback = (err?: Error, stats?: WebpackStats) => void;
-export type WebpackFunction = (options: WebpackConfiguration, callback?: WebpackCallback) => WebpackCompiler;
+export type WebpackLoaderContext<T> = {
+  getOptions: () => T;
+};
 
 export type ChalkFunction = (str: string) => string;
 
@@ -48,7 +38,8 @@ export type ServiceWorkerBuildConfig = {
   name: string;
   entry: string;
   dest: string;
-  define: WebpackPluginInstance;
+  define: InstanceType<WebpackDefinePlugin>;
+  defines: Record<string, string>;
   resolve: WebpackResolveOptions;
   sideEffects: SideEffects;
 };

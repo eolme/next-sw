@@ -1,6 +1,7 @@
-import type { WebpackCompiler } from './types';
+import type { WebpackCompiler } from './types.js';
 
-import { NAME, dynamic } from './utils';
+import { dynamic } from './dynamic.js';
+import { NAME } from './utils.js';
 
 const swc = dynamic('next/dist/build/swc');
 
