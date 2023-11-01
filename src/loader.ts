@@ -19,8 +19,7 @@ export default function ServiceWorkerLoader(
     isModule: true,
     minify: options.minify,
     module: {
-      type: 'es6',
-      lazy: true
+      type: 'es6'
     },
     jsc: {
       parser: {
